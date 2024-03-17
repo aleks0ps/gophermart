@@ -1,0 +1,11 @@
+version: "3"
+services:
+  pg:
+    image: postgres:15.5-bookworm
+    restart: always
+    environment:
+      POSTGRES_DB: gophermart
+      POSTGRES_USER: gophermart
+      POSTGRES_PASSWORD: gophermart
+    ports:
+      - "5432:5432"
