@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/aleks0ps/gophermart/internal/app/gerror"
+	myerror "github.com/aleks0ps/gophermart/internal/app/error"
 	myhttp "github.com/aleks0ps/gophermart/internal/app/http"
 	"github.com/aleks0ps/gophermart/internal/app/storage"
 )
@@ -34,7 +34,7 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.DB.Register(r.Context(), &user); err != nil {
-		if errors.Is(err, gerror.LoginAlreadyTaken) {
+		if errors.Is(err, myerror.LoginAlreadyTaken) {
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusConflict, nil)
 			return
 		}

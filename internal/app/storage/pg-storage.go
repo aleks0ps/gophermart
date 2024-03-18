@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/aleks0ps/gophermart/internal/app/gerror"
+	myerror "github.com/aleks0ps/gophermart/internal/app/error"
 	"github.com/aleks0ps/gophermart/internal/app/util"
 )
 
@@ -63,7 +63,7 @@ func (p *PGStorage) Register(ctx context.Context, user *User) error {
 			// Record already exists
 			if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
 				// Wrap error
-				return fmt.Errorf("%w", gerror.LoginAlreadyTaken)
+				return fmt.Errorf("%w", myerror.LoginAlreadyTaken)
 			}
 		}
 		return err

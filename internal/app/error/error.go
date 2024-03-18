@@ -1,5 +1,4 @@
-// gophermart errors
-package gerror
+package error
 
 import "errors"
 
