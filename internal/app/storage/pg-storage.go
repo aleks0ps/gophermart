@@ -3,10 +3,9 @@ package storage
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
@@ -46,7 +45,14 @@ func NewPGStorage(ctx context.Context, databaseDSN string, logger *zap.SugaredLo
 	}
 	// Create tables
 	if err := tmpDBInit(ctx, db, logger); err != nil {
-		logger.Errorln(err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			// DuplicateTable
+			if pgerrcode.IsSyntaxErrororAccessRuleViolation(pgErr.Code) {
+				return &PGStorage{DB: db, logger: logger}, nil
+			}
+			return nil, err
+		}
 	}
 	return &PGStorage{DB: db, logger: logger}, nil
 }
@@ -62,11 +68,20 @@ func (p *PGStorage) Register(ctx context.Context, user *User) error {
 		if errors.As(err, &pgErr) {
 			// Record already exists
 			if pgerrcode.IsIntegrityConstraintViolation(pgErr.Code) {
-				// Wrap error
-				return fmt.Errorf("%w", myerror.LoginAlreadyTaken)
+				return myerror.LoginAlreadyTaken
 			}
 		}
 		return err
 	}
+	return nil
+}
+
+func (p *PGStorage) Login(ctx context.Context, user *User) error {
+	hPassword, err := util.Hash(user.Password)
+	_ = hPassword
+	if err != nil {
+		return err
+	}
+	// Search for specific login and password
 	return nil
 }

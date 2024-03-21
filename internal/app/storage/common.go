@@ -7,13 +7,18 @@ type User struct {
 	Password string `json:"password" db:"password"`
 }
 
-type Order struct{}
-type Balance struct{}
-
 type Register interface {
 	Register(ctx context.Context, user *User) error
 }
 
+type Login interface {
+	Login(ctx context.Context, user *User) error
+}
+
+type Order struct{}
+type Balance struct{}
+
 type Storage interface {
 	Register
+	Login
 }

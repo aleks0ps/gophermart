@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
+	mycookie "github.com/aleks0ps/gophermart/internal/app/cookie"
 	myerror "github.com/aleks0ps/gophermart/internal/app/error"
 	myhttp "github.com/aleks0ps/gophermart/internal/app/http"
+
 	"github.com/aleks0ps/gophermart/internal/app/storage"
 )
 
@@ -17,6 +18,7 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 	stype := r.Header.Get("Content-Type")
 	// Ignore non-JSON data
 	if myhttp.GetContentTypeCode(stype) != myhttp.CTypeJSON {
+		// 400
 		myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusBadRequest, nil)
 		return
 	}
@@ -35,15 +37,24 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.DB.Register(r.Context(), &user); err != nil {
 		if errors.Is(err, myerror.LoginAlreadyTaken) {
+			// 409
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusConflict, nil)
 			return
 		}
+		// 500
 		myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusInternalServerError, nil)
 		return
 	}
+	// Issue token
+	_, err = mycookie.EnsureCookie(&w, r, user.Login)
+	if err != nil {
+		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		return
+	}
+	// 200
 	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
 }
 
 func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Login " + r.Method)
+	return
 }

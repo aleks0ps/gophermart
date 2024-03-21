@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
+	mw "github.com/aleks0ps/gophermart/internal/app/middleware"
 	"github.com/aleks0ps/gophermart/internal/app/service"
 	"github.com/aleks0ps/gophermart/internal/app/storage"
 )
@@ -34,6 +35,9 @@ func Run() {
 	// Init service
 	svc := &service.Service{Logger: sugar, DB: db}
 	r := chi.NewRouter()
+	r.Use(mw.DisableDefaultLogger())
+	r.Use(mw.Logger(sugar))
+	r.Use(mw.Gzipper())
 	r.Post("/api/user/register", svc.Register)
 	r.Post("/api/user/login", svc.Login)
 	http.ListenAndServe(":8080", r)
