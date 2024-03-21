@@ -56,5 +56,42 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
+	stype := r.Header.Get("Content-Type")
+	// Ignore non-JSON data
+	if myhttp.GetContentTypeCode(stype) != myhttp.CTypeJSON {
+		// 400
+		myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusBadRequest, nil)
+		return
+	}
+	// JSON
+	var user storage.User
+	var buf bytes.Buffer
+	// Read data from request body
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		myhttp.WriteError(&w, http.StatusBadRequest, err)
+		return
+	}
+	if err := json.Unmarshal(buf.Bytes(), &user); err != nil {
+		myhttp.WriteError(&w, http.StatusBadRequest, err)
+		return
+	}
+	if err := s.DB.Login(r.Context(), &user); err != nil {
+		if errors.Is(err, myerror.InvalidLoginOrPassword) {
+			// 401
+			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusUnauthorized, nil)
+		}
+		// 500
+		myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusInternalServerError, nil)
+		return
+	}
+	// Issue token
+	_, err = mycookie.EnsureCookie(&w, r, user.Login)
+	if err != nil {
+		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		return
+	}
+	// 200
+	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
 	return
 }

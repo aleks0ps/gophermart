@@ -77,11 +77,16 @@ func (p *PGStorage) Register(ctx context.Context, user *User) error {
 }
 
 func (p *PGStorage) Login(ctx context.Context, user *User) error {
-	hPassword, err := util.Hash(user.Password)
-	_ = hPassword
+	var hPassword string
+	err := p.DB.QueryRow(ctx, "SELECT password FROM users WHERE login=$1", user.Login).Scan(&hPassword)
 	if err != nil {
+		p.logger.Errorln(err.Error())
 		return err
 	}
-	// Search for specific login and password
+	err = util.CheckPasswordHash(hPassword, user.Password)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
 	return nil
 }

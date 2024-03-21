@@ -15,4 +15,6 @@ build:
 ADDR := localhost:8080
 
 test:
-	curl -X POST -H "Content-Type: application/json" -d '{"login": "alexey", "password": "123"}' $(ADDR)/api/user/register
+	curl --cookie-jar - -X POST -H "Content-Type: application/json" -d '{"login": "alexey", "password": "123"}' $(ADDR)/api/user/register
+	curl --cookie-jar - -X POST -H "Content-Type: application/json" -d '{"login": "alexey", "password": "123"}' $(ADDR)/api/user/login
+
