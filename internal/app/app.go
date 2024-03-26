@@ -13,6 +13,7 @@ import (
 )
 
 var DSN string = "postgres://gophermart:gophermart@localhost:5432/gophermart?sslmode=disable"
+var AccrualURL string = "localhost:8080"
 
 func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -33,12 +34,14 @@ func Run() {
 		return
 	}
 	// Init service
-	svc := &service.Service{Logger: sugar, DB: db}
+	svc := &service.Service{Logger: sugar, DB: db, AccrualURL: AccrualURL}
 	r := chi.NewRouter()
 	r.Use(mw.DisableDefaultLogger())
 	r.Use(mw.Logger(sugar))
 	r.Use(mw.Gzipper())
 	r.Post("/api/user/register", svc.Register)
 	r.Post("/api/user/login", svc.Login)
-	http.ListenAndServe(":8080", r)
+	r.Post("/api/user/orders", svc.LoadOrder)
+	r.Get("/api/user/orders", svc.GetOrders)
+	http.ListenAndServe(":8088", r)
 }

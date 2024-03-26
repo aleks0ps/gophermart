@@ -6,6 +6,7 @@ import (
 )
 
 type Service struct {
-	Logger *zap.SugaredLogger
-	DB     storage.Storage
+	Logger     *zap.SugaredLogger
+	DB         storage.Storage
+	AccrualURL string
 }

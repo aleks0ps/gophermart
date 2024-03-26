@@ -9,3 +9,9 @@ services:
       POSTGRES_PASSWORD: gophermart
     ports:
       - "5432:5432"
+  accrual:
+    build:
+       context: ../cmd/accrual/
+       dockerfile: ../../infra/Dockerfile
+    ports:
+      - "8080:8080"

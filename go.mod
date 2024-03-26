@@ -3,6 +3,7 @@ module github.com/aleks0ps/gophermart
 go 1.21.5
 
 require (
+	github.com/ShiraazMoollatjie/goluhn v0.0.0-20211017190329-0d86158c056a // indirect
 	github.com/go-chi/chi v1.5.5 // indirect
 	github.com/go-chi/chi/v5 v5.0.12 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
