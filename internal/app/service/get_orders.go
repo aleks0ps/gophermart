@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	mycookie "github.com/aleks0ps/gophermart/internal/app/cookie"
@@ -48,11 +49,12 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 				s.Logger.Errorln(err.Error())
 				return
 			}
+			// for json output
+			order.Number = strings.Clone(order.Order)
 			if len(buf) == 0 {
 				s.Logger.Infoln("buf is empty")
 				return
 			}
-			// for json output
 			if err := json.Unmarshal(buf, order); err != nil {
 				s.Logger.Errorln(err.Error())
 				return
@@ -60,9 +62,12 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	wg.Wait()
+	for _, order := range orders {
+		order.Order = ""
+	}
 	res, err := json.Marshal(orders)
 	if err != nil {
-		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusInternalServerError, nil)
 		return
 	}
 	myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusOK, res)

@@ -11,4 +11,3 @@ install:
 	  wget $(TEST_URL); \
 	fi
 	chmod +x $(BIN)
-

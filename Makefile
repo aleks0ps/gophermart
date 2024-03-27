@@ -22,5 +22,5 @@ test1:
 	curl -b cookie.txt -X POST -H "Content-Type: text/plain" -d '123456789007' $(ADDR)/api/user/orders
 
 test2:
-	curl -b cookie.txt $(ADDR)/api/user/orders
+	curl -v -b cookie.txt $(ADDR)/api/user/orders
 

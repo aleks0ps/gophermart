@@ -20,21 +20,6 @@ type PGStorage struct {
 	logger *zap.SugaredLogger
 }
 
-/*
-	func tmpDBInit(ctx context.Context, db *pgxpool.Pool, logger *zap.SugaredLogger) error {
-		_, err := db.Exec(ctx, `CREATE TABLE IF NOT EXISTS users (
-					id BIGSERIAL PRIMARY KEY,
-					login TEXT NOT NULL,
-					password TEXT NOT NULL);
-					CREATE UNIQUE INDEX unique_users ON users (login) NULLS NOT DISTINCT
-					`)
-		if err != nil {
-			logger.Errorln("Unable to init DB: ", err)
-			return err
-		}
-		return nil
-	}
-*/
 func NewPGStorage(ctx context.Context, databaseDSN string, logger *zap.SugaredLogger) (*PGStorage, error) {
 	poolConfig, err := pgxpool.ParseConfig(databaseDSN)
 	if err != nil {

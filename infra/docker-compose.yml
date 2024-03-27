@@ -15,3 +15,13 @@ services:
        dockerfile: ../../infra/Dockerfile
     ports:
       - "8080:8080"
+  pg-accrual:
+    image: postgres:15.5-bookworm
+    restart: always
+    environment:
+      POSTGRES_DB: accrual
+      POSTGRES_USER: accrual
+      POSTGRES_PASSWORD: accrual
+    ports:
+      - "6432:5432"
+
