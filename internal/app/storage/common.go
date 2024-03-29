@@ -20,10 +20,16 @@ type Order struct {
 	UploadedAt string `json:"uploaded_at" db:"uploaded_at"`
 }
 
+type Balance struct {
+	Current   string `json:"current"`
+	Withdrawn string `json:"withdrawn"`
+}
+
 type Buyer interface {
 	LoadOrder(ctx context.Context, user *User, order *Order) error
 	UpdateBalance(ctx context.Context, user *User, order *Order) error
 	GetOrders(ctx context.Context, user *User) ([]*Order, error)
+	GetBalance(ctx context.Context, user *User) (*Balance, error)
 }
 
 type Storage interface {

@@ -32,12 +32,4 @@ CREATE TABLE IF NOT EXISTS balance (
       REFERENCES users(login)
 );
 
-CREATE TABLE IF NOT EXISTS balance (
-  id BIGSERIAL PRIMARY KEY,
-  login TEXT NOT NULL,
-  balance float4,
-  withdrawal float4,
-  CONSTRAINT fk_login
-    FOREIGN KEY(login)
-      REFERENCES users(login)
-);
+CREATE UNIQUE INDEX unique_users ON balance (login) NULLS NOT DISTINCT;

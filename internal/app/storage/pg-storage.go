@@ -156,3 +156,13 @@ func (p *PGStorage) GetOrders(ctx context.Context, user *User) ([]*Order, error)
 	}
 	return orders, nil
 }
+
+func (p *PGStorage) GetBalance(ctx context.Context, user *User) (*Balance, error) {
+	var balance Balance
+	err := p.DB.QueryRow(ctx, `SELECT current, withdrawn FROM balance WHERE login=$1`, user.Login).Scan(&balance.Current, &balance.Withdrawn)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return nil, err
+	}
+	return &balance, nil
+}

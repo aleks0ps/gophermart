@@ -44,5 +44,6 @@ func Run() {
 	r.Post("/api/user/login", svc.Login)
 	r.Post("/api/user/orders", svc.LoadOrder)
 	r.Get("/api/user/orders", svc.GetOrders)
+	r.Get("/api/user/balance", svc.GetBalance)
 	http.ListenAndServe(opts.RunAddress, r)
 }
