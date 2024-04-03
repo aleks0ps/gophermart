@@ -3,4 +3,3 @@ down:
 
 up:
 	docker compose up -d
-	#./load-orders.sh

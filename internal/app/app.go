@@ -12,9 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var DSN string = "postgres://gophermart:gophermart@localhost:5432/gophermart?sslmode=disable"
-var AccrualURL string = "localhost:8080"
-
 func Run() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

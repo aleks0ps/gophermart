@@ -37,6 +37,7 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(r.Body)
 	if err != nil {
+		s.Logger.Errorln(err.Error())
 		myhttp.WriteError(&w, http.StatusBadRequest, err)
 		return
 	}
@@ -44,6 +45,7 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	user := storage.User{Login: login}
 	order := storage.Order{UploadedAt: time.Now().Format(time.RFC3339)}
 	if err := json.Unmarshal(buf.Bytes(), &order); err != nil {
+		s.Logger.Errorln(err.Error())
 		myhttp.WriteError(&w, http.StatusBadRequest, err)
 		return
 	}
@@ -76,7 +78,10 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	err = s.DB.BalanceDecrease(r.Context(), &user, &order)
 	if err != nil {
 		s.Logger.Errorln(err.Error())
+		// 500
+		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		return
 	}
-	// XXX 202
+	// 200
 	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
 }

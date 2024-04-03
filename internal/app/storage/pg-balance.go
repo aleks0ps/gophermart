@@ -151,5 +151,4 @@ func (p *PGStorage) GetWithdrawals(ctx context.Context, user *User) ([]*Order, e
 		return orders, err
 	}
 	return orders, nil
-
 }
