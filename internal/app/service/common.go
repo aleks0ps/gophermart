@@ -10,3 +10,7 @@ type Service struct {
 	DB         storage.Storage
 	AccrualURL string
 }
+
+func (s *Service) AccrualHTTP() string {
+	return "http://" + s.AccrualURL
+}

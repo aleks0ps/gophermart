@@ -13,11 +13,9 @@ import (
 	myerror "github.com/aleks0ps/gophermart/internal/app/error"
 	myhttp "github.com/aleks0ps/gophermart/internal/app/http"
 	"github.com/aleks0ps/gophermart/internal/app/storage"
-
-	"github.com/ShiraazMoollatjie/goluhn"
 )
 
-func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
+func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	// Validate user
 	if err := mycookie.ValidateCookie(r); err != nil {
 		s.Logger.Errorln(err.Error())
@@ -33,7 +31,7 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	stype := r.Header.Get("Content-Type")
 	// Plain text
-	if myhttp.GetContentTypeCode(stype) != myhttp.CTypePlain {
+	if myhttp.GetContentTypeCode(stype) != myhttp.CTypeJSON {
 		// 400
 		myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusBadRequest, nil)
 		return
@@ -45,18 +43,28 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// XXX
-	//s.Logger.Infoln(" LoadOrder: " + string(buf.Bytes()))
-	// Validate order number
-	err = goluhn.Validate(string(buf.Bytes()))
-	if err != nil {
-		// 422
-		myhttp.WriteError(&w, http.StatusUnprocessableEntity, err)
+	// s.Logger.Infoln(" LoadOrderWithdrawal: " + string(buf.Bytes()))
+	// Parse json
+	user := storage.User{Login: login}
+	order := storage.Order{UploadedAt: time.Now().Format(time.RFC3339)}
+	if err := json.Unmarshal(buf.Bytes(), &order); err != nil {
+		myhttp.WriteError(&w, http.StatusBadRequest, err)
 		return
 	}
-	user := storage.User{Login: login}
-	order := storage.Order{Order: string(buf.Bytes()), UploadedAt: time.Now().Format(time.RFC3339)}
+	err = s.DB.CheckWithdrawn(r.Context(), &user, &order)
+	if err != nil {
+		s.Logger.Errorln(err.Error())
+		if errors.Is(err, myerror.InsufficientBalance) {
+			// 402
+			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusPaymentRequired, nil)
+		} else {
+			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusInternalServerError, nil)
+		}
+		return
+	}
 	// Store order to database
 	if err := s.DB.LoadOrder(r.Context(), &user, &order); err != nil {
+		s.Logger.Errorln(err.Error())
 		if errors.Is(err, myerror.OrderLoaded) {
 			// 200
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
@@ -69,6 +77,14 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	go func() {
+		// apply discount
+		ctx := context.Background()
+		err = s.DB.BalanceDecrease(ctx, &user, &order)
+		if err != nil {
+			s.Logger.Errorln(err.Error())
+		}
+	}()
 	go func() {
 		res, err := http.Get(s.AccrualHTTP() + "/api/orders/" + order.Order)
 		if err != nil {
@@ -94,6 +110,6 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 			s.Logger.Errorln(err.Error())
 		}
 	}()
-	// 202
-	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusAccepted, nil)
+	// XXX 202
+	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 
@@ -86,7 +87,13 @@ func (p *PGStorage) LoadOrder(ctx context.Context, user *User, order *Order) err
 	if err != nil {
 		// Insert data if there is no entries
 		if errors.Is(err, pgx.ErrNoRows) {
-			_, err := p.DB.Exec(ctx, `INSERT INTO orders(login,order_number,uploaded_at) values ($1,$2,$3)`, user.Login, order.Order, order.UploadedAt)
+			withdrawn, err := jsonNumberToFloat64(order.Withdrawn)
+			if err != nil {
+				p.logger.Errorln(err.Error())
+				return err
+			}
+			_, err = p.DB.Exec(ctx, `INSERT INTO orders(login,order_number,withdrawn,uploaded_at) values ($1,$2,$3,$4)`,
+				user.Login, order.Order, withdrawn, order.UploadedAt)
 			if err != nil {
 				p.logger.Errorln(err.Error())
 				return err
@@ -105,27 +112,70 @@ func (p *PGStorage) LoadOrder(ctx context.Context, user *User, order *Order) err
 	return myerror.OrderInUse
 }
 
-func (p *PGStorage) UpdateBalance(ctx context.Context, user *User, order *Order) error {
-	current, err := strconv.ParseFloat(order.Accrual, 64)
+func (p *PGStorage) CheckWithdrawn(ctx context.Context, user *User, order *Order) error {
+	var sCurrent string
+	var withdrawn float64
+	if order.Withdrawn.String() != "" {
+		f, err := order.Withdrawn.Float64()
+		if err != nil {
+			p.logger.Errorln(err.Error())
+			return err
+		}
+		withdrawn = f
+	}
+	// find current balance
+	err := p.DB.QueryRow(ctx, `SELECT current FROM balance WHERE login=$1`, user.Login).Scan(&sCurrent)
 	if err != nil {
 		p.logger.Errorln(err.Error())
 		return err
 	}
-	var login string
-	err = p.DB.QueryRow(ctx, `SELECT login FROM balance WHERE login=$1`, user.Login).Scan(&login)
+	current, err := strconv.ParseFloat(sCurrent, 64)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			_, err := p.DB.Exec(ctx, `INSERT INTO balance (login, current) values ($1,$2)`, user.Login, current)
-			if err != nil {
-				p.logger.Errorln(err.Error())
-				return err
-			}
-		} else {
-			p.logger.Errorln(err.Error())
-			return err
-		}
+		p.logger.Errorln(err.Error())
+		return err
 	}
-	_, err = p.DB.Exec(ctx, `UPDATE balance SET current = current + $1 WHERE login = $2`, current, user.Login)
+	// check that we have enough balance to withdraw
+	if current < withdrawn {
+		p.logger.Errorln(myerror.InsufficientBalance.Error())
+		return myerror.InsufficientBalance
+	}
+	return nil
+}
+
+func (p *PGStorage) BalanceInit(ctx context.Context, user *User) error {
+	_, err := p.DB.Exec(ctx, `INSERT INTO balance (login, current) VALUES ($1,$2)`, user.Login, 0)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
+	return nil
+}
+
+func (p *PGStorage) BalanceIncrease(ctx context.Context, user *User, order *Order) error {
+	accrualPoints, err := jsonNumberToFloat64(order.Accrual)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
+	_, err = p.DB.Exec(ctx, `UPDATE balance SET current = balance.current+$1 WHERE login=$2`, accrualPoints, user.Login)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
+	return nil
+}
+
+func (p *PGStorage) BalanceDecrease(ctx context.Context, user *User, order *Order) error {
+	if err := p.CheckWithdrawn(ctx, user, order); err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
+	withdrawn, err := jsonNumberToFloat64(order.Withdrawn)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return err
+	}
+	_, err = p.DB.Exec(ctx, `UPDATE balance SET current = balance.current-$1 WHERE login=$2`, withdrawn, user.Login)
 	if err != nil {
 		p.logger.Errorln(err.Error())
 		return err
@@ -134,7 +184,7 @@ func (p *PGStorage) UpdateBalance(ctx context.Context, user *User, order *Order)
 }
 
 func (p *PGStorage) GetOrders(ctx context.Context, user *User) ([]*Order, error) {
-	rows, err := p.DB.Query(ctx, `SELECT order_number, uploaded_at FROM orders WHERE login=$1`, user.Login)
+	rows, err := p.DB.Query(ctx, `SELECT order_number, uploaded_at FROM orders WHERE login=$1 ORDER BY uploaded_at`, user.Login)
 	if err != nil {
 		p.logger.Errorln(err.Error())
 		return nil, err
@@ -158,11 +208,74 @@ func (p *PGStorage) GetOrders(ctx context.Context, user *User) ([]*Order, error)
 }
 
 func (p *PGStorage) GetBalance(ctx context.Context, user *User) (*Balance, error) {
+	var current, withdrawn string
+	var count int
 	var balance Balance
-	err := p.DB.QueryRow(ctx, `SELECT current, withdrawn FROM balance WHERE login=$1`, user.Login).Scan(&balance.Current, &balance.Withdrawn)
+	// by default balance is zero
+	err := p.DB.QueryRow(ctx, `SELECT current FROM balance WHERE login=$1`, user.Login).Scan(&current)
+	if err != nil {
+		//	if !errors.Is(err, pgx.ErrNoRows) {
+		p.logger.Errorln(err.Error())
+		return nil, err
+		//	}
+	}
+	if err := isFloatS(current); err != nil {
+		p.logger.Errorln(err.Error())
+		return nil, err
+	}
+	// save balance
+	balance.Current = json.Number(current)
+	err = p.DB.QueryRow(ctx, `SELECT count(withdrawn) FROM orders WHERE login=$1`, user.Login).Scan(&count)
 	if err != nil {
 		p.logger.Errorln(err.Error())
 		return nil, err
 	}
+	if count > 0 {
+		// sum all withdrawals
+		err = p.DB.QueryRow(ctx, `SELECT sum(withdrawn) FROM orders WHERE login=$1`, user.Login).Scan(&withdrawn)
+		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				p.logger.Errorln(err.Error())
+				return nil, err
+			}
+		}
+		if err := isFloatS(withdrawn); err != nil {
+			p.logger.Errorln(err.Error())
+			return nil, err
+		}
+		balance.Withdrawn = json.Number(withdrawn)
+	} else {
+		balance.Withdrawn = json.Number("0")
+	}
 	return &balance, nil
+}
+
+func (p *PGStorage) GetWithdrawals(ctx context.Context, user *User) ([]*Order, error) {
+	rows, err := p.DB.Query(ctx, `SELECT order_number,withdrawn,uploaded_at 
+				      FROM orders 
+				      WHERE login=$1 AND withdrawn > 0`, user.Login)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, myerror.NoWithdrawals
+		}
+		return nil, err
+	}
+	defer rows.Close()
+	var orders []*Order
+	for rows.Next() {
+		var order Order
+		err := rows.Scan(&order.Order, &order.Withdrawn, &order.UploadedAt)
+		if err != nil {
+			p.logger.Errorln(err.Error())
+			return nil, err
+		}
+		orders = append(orders, &order)
+	}
+	if err := rows.Err(); err != nil {
+		p.logger.Errorln(err.Error())
+		return orders, err
+	}
+	return orders, nil
+
 }

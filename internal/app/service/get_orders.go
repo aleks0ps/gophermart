@@ -37,8 +37,8 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer wg.Done()
 		for _, order := range orders {
-			scheme := "http://"
-			res, err := http.Get(scheme + s.AccrualURL + "/api/orders/" + order.Order)
+			order.Status = "NEW"
+			res, err := http.Get(s.AccrualHTTP() + "/api/orders/" + order.Order)
 			if err != nil {
 				s.Logger.Errorln(err.Error())
 				return
@@ -51,19 +51,21 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 			}
 			// for json output
 			order.Number = strings.Clone(order.Order)
-			if len(buf) == 0 {
-				s.Logger.Infoln("buf is empty")
-				return
-			}
-			if err := json.Unmarshal(buf, order); err != nil {
-				s.Logger.Errorln(err.Error())
-				return
+			if len(buf) > 0 {
+				if err := json.Unmarshal(buf, order); err != nil {
+					s.Logger.Errorln(err.Error())
+					return
+				}
 			}
 		}
 	}()
 	wg.Wait()
 	for _, order := range orders {
 		order.Order = ""
+	}
+	if len(orders) == 0 {
+		myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusNoContent, nil)
+		return
 	}
 	res, err := json.Marshal(orders)
 	if err != nil {

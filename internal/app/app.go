@@ -45,5 +45,7 @@ func Run() {
 	r.Post("/api/user/orders", svc.LoadOrder)
 	r.Get("/api/user/orders", svc.GetOrders)
 	r.Get("/api/user/balance", svc.GetBalance)
+	r.Post("/api/user/balance/withdraw", svc.LoadOrderWithdraw)
+	r.Get("/api/user/withdrawals", svc.GetWithdrawals)
 	http.ListenAndServe(opts.RunAddress, r)
 }
