@@ -2,10 +2,8 @@ package service
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"time"
 
@@ -42,8 +40,6 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 		myhttp.WriteError(&w, http.StatusBadRequest, err)
 		return
 	}
-	// XXX
-	// s.Logger.Infoln(" LoadOrderWithdrawal: " + string(buf.Bytes()))
 	// Parse json
 	user := storage.User{Login: login}
 	order := storage.Order{UploadedAt: time.Now().Format(time.RFC3339)}
@@ -77,41 +73,10 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	go func() {
-		// apply discount
-		ctx := context.Background()
-		err = s.DB.BalanceDecrease(ctx, &user, &order)
-		if err != nil {
-			s.Logger.Errorln(err.Error())
-		}
-	}()
-	go func() {
-		res, err := http.Get(s.AccrualHTTP() + "/api/orders/" + order.Order)
-		if err != nil {
-			s.Logger.Errorln(err.Error())
-			return
-		}
-		defer res.Body.Close()
-		buf, err := io.ReadAll(res.Body)
-		if err != nil {
-			s.Logger.Errorln(err.Error())
-			return
-		}
-		if len(buf) > 0 {
-			// XXX
-			s.Logger.Infoln(string(buf))
-			if err := json.Unmarshal(buf, &order); err != nil {
-				s.Logger.Errorln(err.Error())
-				return
-			}
-		}
-		// Update balance
-		ctx := context.Background()
-		err = s.DB.BalanceIncrease(ctx, &user, &order)
-		if err != nil {
-			s.Logger.Errorln(err.Error())
-		}
-	}()
+	err = s.DB.BalanceDecrease(r.Context(), &user, &order)
+	if err != nil {
+		s.Logger.Errorln(err.Error())
+	}
 	// XXX 202
 	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
 }
