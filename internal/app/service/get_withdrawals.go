@@ -28,7 +28,7 @@ func (s *Service) GetWithdrawals(w http.ResponseWriter, r *http.Request) {
 	user := storage.User{Login: login}
 	orders, err := s.DB.GetWithdrawals(r.Context(), &user)
 	if err != nil {
-		if errors.Is(err, myerror.NoWithdrawals) {
+		if errors.Is(err, myerror.ErrNoWithdrawals) {
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusNoContent, nil)
 			return
 		}

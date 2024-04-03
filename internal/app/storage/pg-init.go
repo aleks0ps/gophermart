@@ -2,7 +2,10 @@ package storage
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 )
@@ -43,4 +46,29 @@ func tmpDBInit(ctx context.Context, db *pgxpool.Pool, logger *zap.SugaredLogger)
 		return err
 	}
 	return nil
+}
+
+func NewPGStorage(ctx context.Context, databaseDSN string, logger *zap.SugaredLogger) (*PGStorage, error) {
+	poolConfig, err := pgxpool.ParseConfig(databaseDSN)
+	if err != nil {
+		logger.Errorln(err)
+		return nil, err
+	}
+	db, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		logger.Errorln(err)
+		return nil, err
+	}
+	// Create tables
+	if err := tmpDBInit(ctx, db, logger); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			// DuplicateTable
+			if pgerrcode.IsSyntaxErrororAccessRuleViolation(pgErr.Code) {
+				return &PGStorage{DB: db, logger: logger}, nil
+			}
+			return nil, err
+		}
+	}
+	return &PGStorage{DB: db, logger: logger}, nil
 }

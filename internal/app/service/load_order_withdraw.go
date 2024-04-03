@@ -50,7 +50,7 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	err = s.DB.CheckWithdrawn(r.Context(), &user, &order)
 	if err != nil {
 		s.Logger.Errorln(err.Error())
-		if errors.Is(err, myerror.InsufficientBalance) {
+		if errors.Is(err, myerror.ErrInsufficientBalance) {
 			// 402
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusPaymentRequired, nil)
 		} else {
@@ -61,10 +61,10 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 	// Store order to database
 	if err := s.DB.LoadOrder(r.Context(), &user, &order); err != nil {
 		s.Logger.Errorln(err.Error())
-		if errors.Is(err, myerror.OrderLoaded) {
+		if errors.Is(err, myerror.ErrOrderLoaded) {
 			// 200
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
-		} else if errors.Is(err, myerror.OrderInUse) {
+		} else if errors.Is(err, myerror.ErrOrderInUse) {
 			// 409
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusConflict, nil)
 		} else {

@@ -44,23 +44,21 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		myhttp.WriteError(&w, http.StatusBadRequest, err)
 		return
 	}
-	// XXX
-	//s.Logger.Infoln(" LoadOrder: " + string(buf.Bytes()))
 	// Validate order number
-	err = goluhn.Validate(string(buf.Bytes()))
+	err = goluhn.Validate(buf.String())
 	if err != nil {
 		// 422
 		myhttp.WriteError(&w, http.StatusUnprocessableEntity, err)
 		return
 	}
 	user := storage.User{Login: login}
-	order := storage.Order{Order: string(buf.Bytes()), UploadedAt: time.Now().Format(time.RFC3339)}
+	order := storage.Order{Order: buf.String(), UploadedAt: time.Now().Format(time.RFC3339)}
 	// Store order to database
 	if err := s.DB.LoadOrder(r.Context(), &user, &order); err != nil {
-		if errors.Is(err, myerror.OrderLoaded) {
+		if errors.Is(err, myerror.ErrOrderLoaded) {
 			// 200
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
-		} else if errors.Is(err, myerror.OrderInUse) {
+		} else if errors.Is(err, myerror.ErrOrderInUse) {
 			// 409
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusConflict, nil)
 		} else {
@@ -82,8 +80,6 @@ func (s *Service) LoadOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(buf) > 0 {
-			// XXX
-			s.Logger.Infoln(string(buf))
 			if err := json.Unmarshal(buf, &order); err != nil {
 				s.Logger.Errorln(err.Error())
 				return

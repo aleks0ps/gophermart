@@ -4,7 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"go.uber.org/zap"
 )
+
+type PGStorage struct {
+	DB     *pgxpool.Pool
+	logger *zap.SugaredLogger
+}
 
 type User struct {
 	Login    string `json:"login" db:"login"`

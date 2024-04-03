@@ -33,7 +33,7 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 	orders, err := s.DB.GetOrders(r.Context(), &user)
 	if err != nil {
 		s.Logger.Errorln(err.Error())
-		if errors.Is(err, myerror.NoOrders) {
+		if errors.Is(err, myerror.ErrNoOrders) {
 			// 204
 			myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusNoContent, nil)
 		} else {

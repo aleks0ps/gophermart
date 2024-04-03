@@ -2,10 +2,10 @@ package error
 
 import "errors"
 
-var LoginAlreadyTaken = errors.New("login already taken")
-var InvalidLoginOrPassword = errors.New("invalid login or password")
-var OrderLoaded = errors.New("order already loaded by user")
-var OrderInUse = errors.New("order alredy loaded by another user")
-var InsufficientBalance = errors.New("insufficient balance")
-var NoWithdrawals = errors.New("no withdrawals")
-var NoOrders = errors.New("no orders")
+var ErrLoginAlreadyTaken = errors.New("login already taken")
+var ErrInvalidLoginOrPassword = errors.New("invalid login or password")
+var ErrOrderLoaded = errors.New("order already loaded by user")
+var ErrOrderInUse = errors.New("order alredy loaded by another user")
+var ErrInsufficientBalance = errors.New("insufficient balance")
+var ErrNoWithdrawals = errors.New("no withdrawals")
+var ErrNoOrders = errors.New("no orders")

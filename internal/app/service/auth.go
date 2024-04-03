@@ -37,7 +37,7 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.DB.Register(r.Context(), &user); err != nil {
-		if errors.Is(err, myerror.LoginAlreadyTaken) {
+		if errors.Is(err, myerror.ErrLoginAlreadyTaken) {
 			// 409
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusConflict, nil)
 			return
@@ -86,7 +86,7 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.DB.Login(r.Context(), &user); err != nil {
-		if errors.Is(err, myerror.InvalidLoginOrPassword) {
+		if errors.Is(err, myerror.ErrInvalidLoginOrPassword) {
 			// 401
 			myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusUnauthorized, nil)
 		}
@@ -102,5 +102,4 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	// 200
 	myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusOK, nil)
-	return
 }

@@ -26,9 +26,8 @@ func main() {
 	}
 	fmt.Println("Order: " + order.Order)
 	fmt.Printf("Withdraw: %f\n", fl)
-	var order2 Order
-	order2.Order = "7138742213177"
-	order2.Withdraw = "252.52"
+	order.Order = "7138742213177"
+	order.Withdraw = "252.52"
 	res, err := json.Marshal(&order)
 	if err != nil {
 		fmt.Println(err.Error())
