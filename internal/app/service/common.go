@@ -12,5 +12,5 @@ type Service struct {
 }
 
 func (s *Service) AccrualHTTP() string {
-	return "http://" + s.AccrualURL
+	return s.AccrualURL
 }

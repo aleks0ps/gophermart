@@ -98,6 +98,8 @@ func (s *Service) LoadOrderWithdraw(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(buf) > 0 {
+			// XXX
+			s.Logger.Infoln(string(buf))
 			if err := json.Unmarshal(buf, &order); err != nil {
 				s.Logger.Errorln(err.Error())
 				return

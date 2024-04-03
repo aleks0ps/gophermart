@@ -25,13 +25,6 @@ type Order struct {
 	UploadedAt string      `json:"uploaded_at,omitempty" db:"uploaded_at"`
 }
 
-/*
-type Balance struct {
-	Current   float32 `json:"current"`
-	Withdrawn float32 `json:"withdrawn"`
-}
-*/
-
 type Balance struct {
 	Current   json.Number `json:"current"`
 	Withdrawn json.Number `json:"withdrawn"`

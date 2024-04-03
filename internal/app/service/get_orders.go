@@ -2,12 +2,14 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
 
 	mycookie "github.com/aleks0ps/gophermart/internal/app/cookie"
+	myerror "github.com/aleks0ps/gophermart/internal/app/error"
 	myhttp "github.com/aleks0ps/gophermart/internal/app/http"
 	"github.com/aleks0ps/gophermart/internal/app/storage"
 )
@@ -16,6 +18,7 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 	// Validate user
 	if err := mycookie.ValidateCookie(r); err != nil {
 		s.Logger.Errorln(err.Error())
+		// 401
 		myhttp.WriteResponse(&w, myhttp.CTypeNone, http.StatusUnauthorized, nil)
 		return
 	}
@@ -29,7 +32,13 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 	user := storage.User{Login: login}
 	orders, err := s.DB.GetOrders(r.Context(), &user)
 	if err != nil {
-		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		s.Logger.Errorln(err.Error())
+		if errors.Is(err, myerror.NoOrders) {
+			// 204
+			myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusNoContent, nil)
+		} else {
+			myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		}
 		return
 	}
 	var wg sync.WaitGroup
@@ -52,6 +61,7 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 			// for json output
 			order.Number = strings.Clone(order.Order)
 			if len(buf) > 0 {
+				s.Logger.Infoln(string(buf))
 				if err := json.Unmarshal(buf, order); err != nil {
 					s.Logger.Errorln(err.Error())
 					return
@@ -60,12 +70,12 @@ func (s *Service) GetOrders(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	wg.Wait()
-	for _, order := range orders {
-		order.Order = ""
-	}
 	if len(orders) == 0 {
 		myhttp.WriteResponse(&w, myhttp.CTypeJSON, http.StatusNoContent, nil)
 		return
+	}
+	for _, order := range orders {
+		order.Order = ""
 	}
 	res, err := json.Marshal(orders)
 	if err != nil {

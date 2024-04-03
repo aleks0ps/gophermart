@@ -184,6 +184,15 @@ func (p *PGStorage) BalanceDecrease(ctx context.Context, user *User, order *Orde
 }
 
 func (p *PGStorage) GetOrders(ctx context.Context, user *User) ([]*Order, error) {
+	var count int
+	err := p.DB.QueryRow(ctx, `SELECT count(order_number) FROM orders WHERE login=$1`, user.Login).Scan(&count)
+	if err != nil {
+		p.logger.Errorln(err.Error())
+		return nil, err
+	}
+	if count == 0 {
+		return nil, myerror.NoOrders
+	}
 	rows, err := p.DB.Query(ctx, `SELECT order_number, uploaded_at FROM orders WHERE login=$1 ORDER BY uploaded_at`, user.Login)
 	if err != nil {
 		p.logger.Errorln(err.Error())
