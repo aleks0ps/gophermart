@@ -11,7 +11,7 @@ type Order struct {
 }
 
 func main() {
-	var js string = `{ "order": "7138742213177", "sum": 252.52 }`
+	js := `{ "order": "7138742213177", "sum": 252.52 }`
 	var emptySlice []Order
 	var order Order
 	err := json.Unmarshal([]byte(js), &order)
