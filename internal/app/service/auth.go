@@ -49,10 +49,13 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 	err = s.DB.BalanceInit(r.Context(), &user)
 	if err != nil {
 		s.Logger.Errorln(err.Error())
+		myhttp.WriteError(&w, http.StatusInternalServerError, err)
+		return
 	}
 	// Issue token
 	_, err = mycookie.EnsureCookie(&w, r, user.Login)
 	if err != nil {
+		s.Logger.Errorln(err.Error())
 		myhttp.WriteError(&w, http.StatusInternalServerError, err)
 		return
 	}
