@@ -2,7 +2,6 @@ package service
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -47,13 +46,10 @@ func (s *Service) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Init User balance
-	go func() {
-		ctx := context.Background()
-		err = s.DB.BalanceInit(ctx, &user)
-		if err != nil {
-			s.Logger.Errorln(err.Error())
-		}
-	}()
+	err = s.DB.BalanceInit(r.Context(), &user)
+	if err != nil {
+		s.Logger.Errorln(err.Error())
+	}
 	// Issue token
 	_, err = mycookie.EnsureCookie(&w, r, user.Login)
 	if err != nil {
