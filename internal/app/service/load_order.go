@@ -33,14 +33,13 @@ func (s *Service) accrualDiscount(ctx context.Context, inputCh <-chan *storage.O
 			resultCh <- order
 			return
 		}
-		defer res.Body.Close()
 		buf, err := io.ReadAll(res.Body)
 		if err != nil {
 			s.Logger.Errorln(err.Error())
 			resultCh <- order
 			return
 		}
-		// Parse discount
+		res.Body.Close()
 		if len(buf) > 0 {
 			// change original object
 			if err := json.Unmarshal(buf, &order); err != nil {
